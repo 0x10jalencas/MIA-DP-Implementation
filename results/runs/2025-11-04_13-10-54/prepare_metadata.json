@@ -1,0 +1,26 @@
+{
+  "rows_total": 1334,
+  "feature_count": 11,
+  "log_target": false,
+  "sizes": {
+    "X_t_train": 319,
+    "X_t_val": 107,
+    "X_t_test": 107,
+    "X_shadow": 801
+  },
+  "seed": 42,
+  "shadow_pool_frac": 0.6,
+  "feature_names": [
+    "age",
+    "bmi",
+    "children",
+    "sex_female",
+    "sex_male",
+    "smoker_no",
+    "smoker_yes",
+    "region_northeast",
+    "region_northwest",
+    "region_southeast",
+    "region_southwest"
+  ]
+}
