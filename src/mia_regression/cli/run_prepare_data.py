@@ -41,12 +41,6 @@ def build_preprocessor():
 
 def main():
     ap = argparse.ArgumentParser(description="Prepare processed arrays and saved splits.")
-    ap.add_argument("--csv", default="data/raw/insurance.csv")
-    ap.add_argument("--outdir", default="data/processed")
-    ap.add_argument("--runs_dir", default="results/runs")
-    ap.add_argument("--shadow_pool_frac", type=float, default=0.6)
-    ap.add_argument("--seed", type=int, default=42)
-    ap.add_argument("--log_target", action="store_true", help="Use log1p(charges) as target.")
     args = ap.parse_args()
 
     Path(args.outdir).mkdir(parents=True, exist_ok=True)

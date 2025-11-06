@@ -18,13 +18,6 @@ def build_attack_features(y_true, y_pred, pred_var):
 
 def main():
     ap = argparse.ArgumentParser(description="Train shadow regressors and build attack dataset.")
-    ap.add_argument("--splits", default="data/processed/processed_splits.npz")
-    ap.add_argument("--out", default="data/processed/attack_dataset_regression.npz")
-    ap.add_argument("--n_shadows", type=int, default=7)
-    ap.add_argument("--shadow_train_frac", type=float, default=0.5)  # per-shadow member fraction
-    ap.add_argument("--n_estimators", type=int, default=150)
-    ap.add_argument("--seed", type=int, default=42)
-    ap.add_argument("--save_models_dir", default="results/runs")  # optional: save shadows
     args = ap.parse_args()
 
     base = Path(".")
