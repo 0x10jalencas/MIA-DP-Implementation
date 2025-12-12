@@ -1,0 +1,21 @@
+{
+  "attack_type": "ART_MembershipInferenceBlackBox",
+  "attack_model_type": "rf",
+  "auc": 0.8071052631578948,
+  "acc": 0.8179905312993162,
+  "confusion": [
+    [
+      289,
+      187
+    ],
+    [
+      159,
+      1266
+    ]
+  ],
+  "n_members_eval": 1425,
+  "n_nonmembers_eval": 476,
+  "seed": 42,
+  "splits": "data/processed/processed_splits.npz",
+  "target_model": "results/runs/2025-12-11_15-27-29/target_model.joblib"
+}

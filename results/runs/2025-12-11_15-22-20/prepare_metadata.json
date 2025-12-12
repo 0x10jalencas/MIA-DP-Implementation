@@ -1,0 +1,26 @@
+{
+  "rows_total": 3961,
+  "feature_count": 11,
+  "log_target": false,
+  "sizes": {
+    "X_t_train": 1425,
+    "X_t_val": 475,
+    "X_t_test": 476,
+    "X_shadow": 1585
+  },
+  "seed": 42,
+  "shadow_pool_frac": 0.4,
+  "feature_names": [
+    "fixed acidity",
+    "volatile acidity",
+    "citric acid",
+    "residual sugar",
+    "chlorides",
+    "free sulfur dioxide",
+    "total sulfur dioxide",
+    "density",
+    "pH",
+    "sulphates",
+    "alcohol"
+  ]
+}

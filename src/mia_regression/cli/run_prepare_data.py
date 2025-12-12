@@ -1,76 +1,110 @@
-import argparse, json, os, time
+import argparse, json, time
 from pathlib import Path
+
+import joblib
 import numpy as np
 import pandas as pd
-from sklearn.compose import ColumnTransformer
-from sklearn.preprocessing import OneHotEncoder, StandardScaler
-from sklearn.pipeline import Pipeline
 from sklearn.model_selection import train_test_split
-import joblib
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
 
-REQ_COLS = ["age","sex","bmi","children","smoker","region","charges"]
-CATEGORICAL = ["sex","smoker","region"]
-NUMERIC = ["age","bmi","children"]
 
 def read_clean(csv_path: str) -> pd.DataFrame:
-    df = pd.read_csv(csv_path)
-    df.columns = [c.strip() for c in df.columns]
-    df = df.replace({"nan": np.nan, "NaN": np.nan, "NULL": np.nan})
-    df = df.dropna(subset=REQ_COLS)
+    """
+    Load and lightly clean the UCI white wine quality dataset.
+
+    The original file uses ';' as a separator and double quotes around headers.
+    We drop rows with missing values and exact duplicates (Humphries et.al)
+    """
+    df = pd.read_csv(csv_path, sep=";")
+    df.columns = [c.strip().strip('"') for c in df.columns]
+    # Drop any rows with missing values (as per our Walkthrough section)
+    df = df.dropna()
+    # Remove exact duplicate records to avoid false membership signals (Humphries et.al)
     df = df.drop_duplicates()
-    df["age"] = pd.to_numeric(df["age"], errors="coerce")
-    df["bmi"] = pd.to_numeric(df["bmi"], errors="coerce")
-    df["children"] = pd.to_numeric(df["children"], errors="coerce").astype(int)
-    df = df.dropna(subset=["age","bmi","children"])
-    for c in CATEGORICAL:
-        df[c] = df[c].astype(str).str.strip().str.lower()
-    df["charges"] = pd.to_numeric(df["charges"], errors="coerce")
-    df = df.dropna(subset=["charges"])
     return df.reset_index(drop=True)
 
-def build_preprocessor():
-    cat = OneHotEncoder(handle_unknown="ignore")
-    num = StandardScaler()
-    pre = ColumnTransformer(
-        transformers=[
-            ("num", num, NUMERIC),
-            ("cat", cat, CATEGORICAL),
-        ]
-    )
-    return Pipeline(steps=[("pre", pre)])
+
+def build_preprocessor(feature_cols):
+    """
+    Standardize all continuous features to zero mean and unit variance.
+    All wine attributes are numeric, so we just apply a StandardScaler (Zhao).
+    """
+    scaler = StandardScaler()
+    pre = Pipeline(steps=[("scaler", scaler)])
+    return pre
 
 def main():
-    ap = argparse.ArgumentParser(description="Prepare processed arrays and saved splits.")
+    ap = argparse.ArgumentParser(
+        description="Prepare processed arrays and saved splits for UCI Wine Quality (white)."
+    )
+    ap.add_argument(
+        "--csv",
+        type=str,
+        required=True,
+        help="Path to winequality-white.csv",
+    )
+    ap.add_argument(
+        "--outdir",
+        type=str,
+        required=True,
+        help="Directory to save processed_splits.npz",
+    )
+    ap.add_argument(
+        "--runs_dir",
+        type=str,
+        required=True,
+        help="Directory to save run metadata and preprocessor",
+    )
+    ap.add_argument(
+        "--seed",
+        type=int,
+        default=42,
+        help="Random seed for deterministic splits",
+    )
+    ap.add_argument(
+        "--shadow_pool_frac",
+        type=float,
+        default=0.4,
+        help="Fraction of data reserved as hold-out pool (non-members).",
+    )
+    ap.add_argument(
+        "--log_target",
+        action="store_true",
+        help="Apply log1p transform to target if desired (not typical for wine quality).",
+    )
     args = ap.parse_args()
 
-    Path(args.outdir).mkdir(parents=True, exist_ok=True)
+    outdir = Path(args.outdir)
+    outdir.mkdir(parents=True, exist_ok=True)
     run_dir = Path(args.runs_dir) / time.strftime("%Y-%m-%d_%H-%M-%S")
     run_dir.mkdir(parents=True, exist_ok=True)
 
+    # 1) Load and clean data
     df = read_clean(args.csv)
-    y = df["charges"].to_numpy(dtype=float)
+    # Target is wine quality (integer 0–10)
+    assert "quality" in df.columns, "Expected 'quality' column in wine dataset."
+    y = df["quality"].to_numpy(dtype=float)
     if args.log_target:
         y = np.log1p(y)
+    # Features are all columns except 'quality'
+    feature_cols = [c for c in df.columns if c != "quality"]
+    X_df = df[feature_cols].copy()
 
-    X_df = df[NUMERIC + CATEGORICAL].copy()
-
-    pre = build_preprocessor()
+    # 2) Build and fit preprocessor (StandardScaler)
+    pre = build_preprocessor(feature_cols)
     X = pre.fit_transform(X_df)
 
     if hasattr(X, "toarray"):
         X = X.toarray()
 
-    ct = pre.named_steps["pre"]
-    ohe = ct.named_transformers_["cat"]
-    if hasattr(ohe, "get_feature_names_out"):
-        cat_feat_names = ohe.get_feature_names_out(CATEGORICAL).tolist()
-    else:
-        cat_feat_names = ohe.get_feature_names(CATEGORICAL).tolist()
-    feature_names = NUMERIC + cat_feat_names
-
+    feature_names = feature_cols
+    
+    # 3) Split into target pool (for train/val/test) and shadow pool (hold-out non-members)
     X_target, X_shadow, y_target, y_shadow = train_test_split(
         X, y, test_size=args.shadow_pool_frac, random_state=args.seed
     )
+    # Within target pool: train / val / test for the regression model
     X_t_train, X_t_temp, y_t_train, y_t_temp = train_test_split(
         X_target, y_target, test_size=0.4, random_state=args.seed
     )
@@ -78,16 +112,22 @@ def main():
         X_t_temp, y_t_temp, test_size=0.5, random_state=args.seed
     )
 
+    # 4) Save splits
     np.savez_compressed(
-        Path(args.outdir) / "processed_splits.npz",
-        X_t_train=X_t_train, y_t_train=y_t_train,
-        X_t_val=X_t_val, y_t_val=y_t_val,
-        X_t_test=X_t_test, y_t_test=y_t_test,
-        X_shadow=X_shadow, y_shadow=y_shadow,
+        outdir / "processed_splits.npz",
+        X_t_train=X_t_train,
+        y_t_train=y_t_train,
+        X_t_val=X_t_val,
+        y_t_val=y_t_val,
+        X_t_test=X_t_test,
+        y_t_test=y_t_test,
+        X_shadow=X_shadow,
+        y_shadow=y_shadow,
         feature_names=np.array(feature_names, dtype=object),
         log_target=np.array([args.log_target]),
     )
 
+    # 5) Save preprocessor
     joblib.dump(pre, run_dir / "preprocessor.joblib")
 
     meta = {
@@ -106,10 +146,8 @@ def main():
     }
     with open(run_dir / "prepare_metadata.json", "w") as f:
         json.dump(meta, f, indent=2)
-
     print(json.dumps(meta, indent=2))
-    print(f"[OK] saved arrays → data/processed/processed_splits.npz")
-    print(f"[OK] saved preprocessor → {run_dir/'preprocessor.joblib'}")
-
+    print(f"[OK] saved arrays => {outdir / 'processed_splits.npz'}")
+    print(f"[OK] saved preprocessor => {run_dir/'preprocessor.joblib'}")
 if __name__ == "__main__":
     main()
