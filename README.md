@@ -185,3 +185,6 @@ Implementation and experimentation leveraged open-source tools including [scikit
 [4]: *Adversarial Robustness Toolbox Documentation – Membership Inference Module*. [https://adversarial-robustness-toolbox.readthedocs.io/en/latest/modules/attacks/inference/membership_inference.html](https://adversarial-robustness-toolbox.readthedocs.io/en/latest/modules/attacks/inference/membership_inference.html)  
 
 [5]: Alencaster, Castillo Hernandez, Silva. “MIA-DP-Implementation.” [https://github.com/0x10jalencas/MIA-DP-Implementation](https://github.com/0x10jalencas/MIA-DP-Implementation)
+
+[6]: Alencaster, Jess, Eman Castillo Hernandez, and Adan Silva. *Membership Inference Attacks for Regression*. 
+Available at: [https://drive.google.com/file/d/1zuBDftke-K5pN01g3rp-FDi58e6v5v5-/view?usp=sharing](https://drive.google.com/file/d/1zuBDftke-K5pN01g3rp-FDi58e6v5v5-/view?usp=sharing)
